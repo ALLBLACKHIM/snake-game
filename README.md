@@ -34,20 +34,20 @@ A modern, feature-rich Snake game built with Next.js, TypeScript, and Tailwind C
 ### Installation
 
 1. Clone the repository
-\`\`\`bash
-git clone <repository-url>
+```bash
+git clone https://github.com/ALLBLACKHIM/snake-game.git
 cd snake-game
-\`\`\`
+```
 
 2. Install dependencies
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 3. Run the development server
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
@@ -93,7 +93,7 @@ npm run dev
 - `npm run lint` - Run ESLint
 
 ### Project Structure
-\`\`\`
+```
 snake-game/
 ├── src/
 │   └── app/
@@ -105,7 +105,7 @@ snake-game/
 ├── public/
 ├── package.json
 └── README.md
-\`\`\`
+```
 
 ## 🎮 Game Mechanics
 
