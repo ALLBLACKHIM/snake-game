@@ -19,10 +19,10 @@ A modern, feature-rich Snake game built with Next.js, TypeScript, and Tailwind C
 
 ### Level Progression
 - **Level 1**: 5 obstacles, gray theme
-- **Level 2**: 7 obstacles, blue theme (25 foods)
-- **Level 3**: 9 obstacles, purple theme (50 foods)
-- **Level 4**: 11 obstacles, green theme (75 foods)
-- **Level 5**: 13 obstacles, red theme (100 foods)
+- **Level 2**: 7 obstacles, blue theme (15 foods)
+- **Level 3**: 9 obstacles, purple theme (30 foods)
+- **Level 4**: 11 obstacles, green theme (45 foods)
+- **Level 5**: 13 obstacles, red theme (60 foods)
 - **And more...**
 
 ## 🚀 Getting Started
