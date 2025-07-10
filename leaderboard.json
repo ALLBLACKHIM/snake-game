@@ -34,5 +34,59 @@
     "timestamp": "10/07/2025, 23:16:45",
     "duration": 1,
     "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752183543584,
+    "score": 10,
+    "foodsEaten": 1,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:39:03",
+    "duration": 2,
+    "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752183543586,
+    "score": 10,
+    "foodsEaten": 1,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:39:03",
+    "duration": 2,
+    "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752183583583,
+    "score": 80,
+    "foodsEaten": 8,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:39:43",
+    "duration": 21,
+    "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752183583584,
+    "score": 80,
+    "foodsEaten": 8,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:39:43",
+    "duration": 21,
+    "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752183609456,
+    "score": 90,
+    "foodsEaten": 9,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:40:09",
+    "duration": 20,
+    "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752183609457,
+    "score": 90,
+    "foodsEaten": 9,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:40:09",
+    "duration": 20,
+    "playerName": "ALLBLACKHIM "
   }
 ]

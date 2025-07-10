@@ -111,31 +111,25 @@ export default function SnakeGame() {
   const [playerName, setPlayerName] = useState('Player')
   const [showNameInput, setShowNameInput] = useState(false)
 
-  useEffect(() => {
-    // Initialize Socket.IO connection for leaderboard
-    fetch('/api/socketio').finally(() => {
-      const socket = io();
-    
-    // Listen for leaderboard updates from server
-    socket.on('leaderboard', (updatedLeaderboard: LeaderboardEntry[]) => {
-      console.log('Received leaderboard update:', updatedLeaderboard);
-      setLeaderboard(updatedLeaderboard);
-    });
-
-    // Handle connection events
-    socket.on('connect', () => {
-      console.log('Connected to leaderboard server');
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Disconnected from leaderboard server');
-    });
-
-      return () => {
-        socket.disconnect();
-      };
-    });
+  const loadLeaderboard = useCallback(async () => {
+    try {
+      const response = await fetch('/api/leaderboard');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Loaded leaderboard:', data);
+        setLeaderboard(data);
+      } else {
+        console.error('Failed to load leaderboard');
+      }
+    } catch (error) {
+      console.error('Error loading leaderboard:', error);
+    }
   }, []);
+
+  // Load leaderboard from API on component mount
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
 
   // Load saved data after component mounts (client-side only)
   useEffect(() => {
@@ -179,13 +173,31 @@ export default function SnakeGame() {
       playerName: playerName || 'Player'
     }
     
-    // Send new score to server - server will handle leaderboard management
-    fetch('/api/socketio').finally(() => {
-      const socket = io();
-      socket.emit('newScore', newEntry);
-    });
-    // Note: leaderboard will be updated via socket 'leaderboard' event
-  }, [gameStartTime, playerName])
+    // Send new score to server via HTTP POST
+    const submitScore = async () => {
+      try {
+        const response = await fetch('/api/leaderboard', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newEntry),
+        });
+        
+        if (response.ok) {
+          console.log('Score submitted successfully:', newEntry);
+          // Reload leaderboard to show updated scores
+          loadLeaderboard();
+        } else {
+          console.error('Failed to submit score');
+        }
+      } catch (error) {
+        console.error('Error submitting score:', error);
+      }
+    };
+    
+    submitScore();
+  }, [gameStartTime, playerName, loadLeaderboard])
 
 
   const moveObstacles = useCallback((obstacles: Obstacle[]): Obstacle[] => {
@@ -426,13 +438,13 @@ const startGame = () => {
   
   return (
     <div className={`flex flex-col items-center justify-center min-h-screen ${levelColors.bg} text-white p-4`}>
-      <h1 className="text-4xl font-bold mb-4">Snake Game</h1>
+      <h1 className="mb-4 text-4xl font-bold">Snake Game</h1>
       
       <div className="mb-3 text-center">
         <span className="text-lg font-semibold text-cyan-400">Current Player: {playerName}</span>
       </div>
       
-      <div className="mb-4 flex flex-wrap justify-center gap-6">
+      <div className="flex flex-wrap justify-center gap-6 mb-4">
         <span className="text-xl">Score: {gameState.score}</span>
         <span className="text-xl">Level: {gameState.level}</span>
         <span className="text-xl">Speed: {Math.round(((BASE_SPEED / gameState.speed) * 100))}%</span>
@@ -446,20 +458,20 @@ const startGame = () => {
       </div>
 
       {showNameInput && (
-        <div className="mb-4 bg-black bg-opacity-50 p-4 rounded">
-          <h3 className="text-xl font-bold mb-2 text-center">Enter Your Name</h3>
-          <div className="flex gap-2 justify-center">
+        <div className="p-4 mb-4 bg-black bg-opacity-50 rounded">
+          <h3 className="mb-2 text-xl font-bold text-center">Enter Your Name</h3>
+          <div className="flex justify-center gap-2">
             <input
               type="text"
               value={playerName}
               onChange={(e) => savePlayerName(e.target.value)}
               placeholder="Your name..."
-              className="px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+              className="px-3 py-2 text-white bg-gray-800 border border-gray-600 rounded focus:border-blue-500 focus:outline-none"
               maxLength={20}
             />
             <button
               onClick={() => setShowNameInput(false)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
+              className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
             >
               Save
             </button>
@@ -471,7 +483,7 @@ const startGame = () => {
         {!isPlaying && !gameState.gameOver && (
           <button
             onClick={startGame}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
+            className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
           >
             Start Game
           </button>
@@ -480,7 +492,7 @@ const startGame = () => {
         {isPlaying && (
           <button
             onClick={pauseGame}
-            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded"
+            className="px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
           >
             Pause
           </button>
@@ -489,7 +501,7 @@ const startGame = () => {
         {gameState.gameOver && (
           <button
             onClick={startGame}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+            className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
           >
             Play Again
           </button>
@@ -497,36 +509,43 @@ const startGame = () => {
         
         <button
           onClick={resetGame}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+          className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
         >
           Reset
         </button>
         
         <button
           onClick={() => setShowLeaderboard(!showLeaderboard)}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded"
+          className="px-4 py-2 bg-purple-600 rounded hover:bg-purple-700"
         >
           {showLeaderboard ? 'Hide' : 'Show'} Leaderboard
         </button>
         
         <button
           onClick={() => setShowNameInput(!showNameInput)}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded"
+          className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700"
         >
           Set Name
         </button>
+        
+        {/* <button
+          onClick={loadLeaderboard}
+          className="px-4 py-2 bg-orange-600 rounded hover:bg-orange-700"
+        >
+          Refresh Leaderboard
+        </button> */}
       </div>
 
       {gameState.gameOver && (
-        <div className="mb-4 text-red-500 text-xl font-bold text-center">
+        <div className="mb-4 text-xl font-bold text-center text-red-500">
           <div>Game Over! Final Score: {gameState.score}</div>
           {gameStartTime > 0 && (
-            <div className="text-yellow-400 mt-2">
+            <div className="mt-2 text-yellow-400">
               Duration: {formatTime(Math.floor((Date.now() - gameStartTime) / 1000))}
             </div>
           )}
           {playerName && (
-            <div className="text-green-400 mt-1">
+            <div className="mt-1 text-green-400">
               Player: {playerName}
             </div>
           )}
@@ -534,25 +553,25 @@ const startGame = () => {
       )}
 
       {showLeaderboard && (
-        <div className="mb-4 bg-black bg-opacity-50 p-4 rounded max-w-md w-full">
-          <h3 className="text-2xl font-bold mb-2 text-center">Leaderboard</h3>
+        <div className="w-full max-w-md p-4 mb-4 bg-black bg-opacity-50 rounded">
+          <h3 className="mb-2 text-2xl font-bold text-center">Leaderboard</h3>
           {leaderboard.length === 0 ? (
             <p className="text-center text-gray-400">No scores yet!</p>
           ) : (
             <div className="space-y-2">
               {leaderboard.map((entry, index) => (
-                <div key={entry.id} className="bg-gray-700 p-3 rounded">
-                  <div className="flex justify-between items-center mb-1">
+                <div key={entry.id} className="p-3 bg-gray-700 rounded">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-yellow-400">#{index + 1}</span>
                     <span className="font-bold text-green-400">Score: {entry.score}</span>
                   </div>
-                  <div className="text-sm text-gray-300 grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
                     <span>Player: {entry.playerName || 'Anonymous'}</span>
                     <span>Level: {entry.level}</span>
                     <span>Duration: {formatTime(entry.duration || 0)}</span>
                     <span>Foods: {entry.foodsEaten}</span>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="mt-1 text-xs text-gray-400">
                     {entry.timestamp}
                   </div>
                 </div>
@@ -594,22 +613,22 @@ const startGame = () => {
       </div>
 
       <div className="mt-4 text-center">
-        <h3 className="text-lg font-bold mb-2 text-yellow-400">Game Controls</h3>
+        <h3 className="mb-2 text-lg font-bold text-yellow-400">Game Controls</h3>
         <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
-          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+          <p className="px-3 py-1 text-white bg-gray-700 rounded">
             <strong>SPACEBAR</strong>: Start Game
           </p>
-          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+          <p className="px-3 py-1 text-white bg-gray-700 rounded">
             <strong>P</strong>: Pause Game
           </p>
-          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+          <p className="px-3 py-1 text-white bg-gray-700 rounded">
             <strong>R</strong>: Reset Game
           </p>
-          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+          <p className="px-3 py-1 text-white bg-gray-700 rounded">
             <strong>Arrow Keys</strong>: Move Snake
           </p>
         </div>
-        <h3 className="text-lg font-bold mb-2 text-yellow-400">Game Rules</h3>
+        <h3 className="mb-2 text-lg font-bold text-yellow-400">Game Rules</h3>
         <p className="text-sm text-gray-400">
           Eat red food to grow and increase your score!
         </p>

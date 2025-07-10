@@ -13,16 +13,13 @@ interface LeaderboardEntry {
   playerName: string;
 }
 
-// Type for socket with server property
-type SocketWithServer = {
-  server: {
-    io?: Server;
+// Type for NextApiResponse with Socket.IO support
+type NextApiResponseWithSocketIO = NextApiResponse & {
+  socket: {
+    server: any & {
+      io?: Server;
+    };
   };
-};
-
-// Type assertion helper for NextApiResponse with Socket.IO
-type NextApiResponseWithSocket = NextApiResponse & {
-  socket: SocketWithServer;
 };
 
 const filePath = 'leaderboard.json';
@@ -57,7 +54,7 @@ function getTop10Players(allEntries: LeaderboardEntry[]): LeaderboardEntry[] {
 }
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-    const socketRes = res as NextApiResponseWithSocket;
+    const socketRes = res as NextApiResponseWithSocketIO;
     
     // Handle GET request to return current leaderboard (top 10 players)
     if (req.method === 'GET') {
@@ -67,49 +64,104 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return;
     }
     
+    // Handle POST request to add new score
+    if (req.method === 'POST') {
+        try {
+            const newEntry: LeaderboardEntry = req.body;
+            console.log('Received new score via POST:', newEntry);
+            
+            const allEntries = readLeaderboard();
+            allEntries.push(newEntry);
+            
+            // Save all entries
+            writeLeaderboard(allEntries);
+            
+            // Get top 10 players and return them
+            const topPlayers = getTop10Players(allEntries);
+            
+            console.log('Updated leaderboard. Top player:', 
+                topPlayers[0] ? `${topPlayers[0].playerName} (${topPlayers[0].score})` : 'None');
+            
+            res.status(200).json({ success: true, leaderboard: topPlayers });
+            return;
+        } catch (error) {
+            console.error('Error processing POST request:', error);
+            res.status(500).json({ error: 'Failed to save score' });
+            return;
+        }
+    }
+    
+    // Check if Socket.IO server is already initialized
     if (socketRes.socket.server.io) {
+        console.log('Socket.IO server already running');
         res.end();
         return;
     }
 
+    console.log('Initializing Socket.IO server...');
+    
+    // Create Socket.IO server with proper configuration for Next.js
     const io = new Server(socketRes.socket.server, {
-        path: '/api/socketio',
+        path: '/api/leaderboard',
         addTrailingSlash: false,
+        cors: {
+            origin: "*",
+            methods: ["GET", "POST"]
+        }
     });
+    
+    // Store the io instance in the socket server
+    socketRes.socket.server.io = io;
 
     io.on('connection', (socket) => {
-        console.log('a user connected');
+        console.log('User connected to leaderboard:', socket.id);
 
-        // Send top 10 players (best score per player) to newly connected client
+        // Send current top 10 players to newly connected client
         const allEntries = readLeaderboard();
         const topPlayers = getTop10Players(allEntries);
         socket.emit('leaderboard', topPlayers);
+        console.log('Sent current leaderboard to client:', socket.id);
 
         socket.on('newScore', (entry: LeaderboardEntry) => {
+            console.log('New score received from', socket.id, ':', entry);
+            
             const allEntries = readLeaderboard();
             allEntries.push(entry);
             
             // Save all entries (for historical data)
             writeLeaderboard(allEntries);
+            console.log('Saved score to leaderboard file');
             
             // Get top 10 players and broadcast to all connected clients
             const topPlayers = getTop10Players(allEntries);
             io.emit('leaderboard', topPlayers);
+            
+            console.log('Broadcasted updated leaderboard to all clients. Top player:', 
+                topPlayers[0] ? `${topPlayers[0].playerName} (${topPlayers[0].score})` : 'None');
         });
 
         socket.on('disconnect', () => {
-            console.log('user disconnected');
+            console.log('User disconnected from leaderboard:', socket.id);
+        });
+
+        socket.on('error', (error) => {
+            console.error('Socket error for', socket.id, ':', error);
         });
     });
 
-    socketRes.socket.server.io = io;
+    io.on('error', (error) => {
+        console.error('Socket.IO server error:', error);
+    });
+
+    console.log('Socket.IO server initialized successfully');
     res.end();
 }
 
 export const config = {
     api: {
-        bodyParser: false,
+        bodyParser: {
+            sizeLimit: '1mb',
+        },
         externalResolver: true,
     },
 };
-
