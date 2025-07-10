@@ -43,6 +43,13 @@ function writeLeaderboard(leaderboard: LeaderboardEntry[]) {
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const socketRes = res as NextApiResponseWithSocket;
     
+    // Handle GET request to return current leaderboard
+    if (req.method === 'GET') {
+        const leaderboard = readLeaderboard();
+        res.status(200).json(leaderboard);
+        return;
+    }
+    
     if (socketRes.socket.server.io) {
         res.end();
         return;
@@ -63,9 +70,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         socket.on('newScore', (entry: LeaderboardEntry) => {
             const leaderboard = readLeaderboard();
             leaderboard.push(entry);
-            leaderboard.sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score);
-            writeLeaderboard(leaderboard);
-            io.emit('leaderboard', leaderboard);
+            // Sort by score (highest first) and keep only top 10
+            const topLeaderboard = leaderboard
+                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score)
+                .slice(0, 10);
+            
+            writeLeaderboard(topLeaderboard);
+            // Broadcast updated top 10 leaderboard to all connected clients
+            io.emit('leaderboard', topLeaderboard);
         });
 
         socket.on('disconnect', () => {

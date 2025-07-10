@@ -113,8 +113,20 @@ export default function SnakeGame() {
 
   useEffect(() => {
     const socket = io();
-    socket.on('leaderboard', (updatedLeaderboard) => {
+    
+    // Listen for leaderboard updates from server
+    socket.on('leaderboard', (updatedLeaderboard: LeaderboardEntry[]) => {
+      console.log('Received leaderboard update:', updatedLeaderboard);
       setLeaderboard(updatedLeaderboard);
+    });
+
+    // Handle connection events
+    socket.on('connect', () => {
+      console.log('Connected to leaderboard server');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from leaderboard server');
     });
 
     return () => {
@@ -128,11 +140,7 @@ export default function SnakeGame() {
     if (savedName) {
       setPlayerName(savedName)
     }
-
-    const savedLeaderboard = localStorage.getItem('snakeGameLeaderboard')
-    if (savedLeaderboard) {
-      setLeaderboard(JSON.parse(savedLeaderboard))
-    }
+    // Note: Leaderboard is now loaded entirely from server via socket
   }, [])
 
   const savePlayerName = useCallback((name: string) => {
@@ -168,18 +176,11 @@ export default function SnakeGame() {
       playerName: playerName || 'Player'
     }
     
-    const updatedLeaderboard = [...leaderboard, newEntry]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10) // Keep top 10 scores
-    
-    setLeaderboard(updatedLeaderboard)
+    // Send new score to server - server will handle leaderboard management
     const socket = io();
     socket.emit('newScore', newEntry);
-
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('snakeGameLeaderboard', JSON.stringify(updatedLeaderboard))
-    }
-  }, [leaderboard, gameStartTime, playerName])
+    // Note: leaderboard will be updated via socket 'leaderboard' event
+  }, [gameStartTime, playerName])
 
 
   const moveObstacles = useCallback((obstacles: Obstacle[]): Obstacle[] => {
