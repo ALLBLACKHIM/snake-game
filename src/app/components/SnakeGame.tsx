@@ -103,24 +103,25 @@ export default function SnakeGame() {
   })
 
   const [isPlaying, setIsPlaying] = useState(false)
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('snakeGameLeaderboard')
-      return saved ? JSON.parse(saved) : []
-    }
-    return []
-  })
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [gameStartTime, setGameStartTime] = useState<number>(0)
   const [currentTime, setCurrentTime] = useState<number>(0)
-  const [playerName, setPlayerName] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedName = localStorage.getItem('snakePlayerName')
-      return savedName || 'Player'
-    }
-    return 'Player'
-  })
+  const [playerName, setPlayerName] = useState('Player')
   const [showNameInput, setShowNameInput] = useState(false)
+
+  // Load saved data after component mounts (client-side only)
+  useEffect(() => {
+    const savedName = localStorage.getItem('snakePlayerName')
+    if (savedName) {
+      setPlayerName(savedName)
+    }
+
+    const savedLeaderboard = localStorage.getItem('snakeGameLeaderboard')
+    if (savedLeaderboard) {
+      setLeaderboard(JSON.parse(savedLeaderboard))
+    }
+  }, [])
 
   const savePlayerName = useCallback((name: string) => {
     setPlayerName(name)
