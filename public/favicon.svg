@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background -->
+  <rect width="32" height="32" fill="#1f2937" rx="4"/>
+  
+  <!-- Grid pattern -->
+  <defs>
+    <pattern id="grid" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="4" fill="#374151"/>
+      <rect width="3" height="3" fill="#1f2937"/>
+    </pattern>
+  </defs>
+  <rect width="32" height="32" fill="url(#grid)" rx="4"/>
+  
+  <!-- Snake body -->
+  <rect x="8" y="16" width="4" height="4" fill="#10b981" rx="1"/>
+  <rect x="12" y="16" width="4" height="4" fill="#10b981" rx="1"/>
+  <rect x="16" y="16" width="4" height="4" fill="#10b981" rx="1"/>
+  <rect x="20" y="16" width="4" height="4" fill="#10b981" rx="1"/>
+  
+  <!-- Snake head (brighter) -->
+  <rect x="20" y="16" width="4" height="4" fill="#34d399" rx="1"/>
+  
+  <!-- Snake eyes -->
+  <circle cx="21.5" cy="17.5" r="0.5" fill="#1f2937"/>
+  <circle cx="22.5" cy="17.5" r="0.5" fill="#1f2937"/>
+  
+  <!-- Food -->
+  <rect x="26" y="8" width="3" height="3" fill="#ef4444" rx="1.5"/>
+  
+  <!-- Obstacle -->
+  <rect x="4" y="8" width="3" height="3" fill="#fbbf24" rx="0.5"/>
+</svg>

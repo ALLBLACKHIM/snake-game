@@ -19,6 +19,8 @@ interface LeaderboardEntry {
   foodsEaten: number
   level: number
   timestamp: string
+  duration: number // Duration in seconds
+  playerName?: string // Optional player name
 }
 
 interface GameState {
@@ -50,6 +52,12 @@ const getLevelColors = (level: number) => {
     { bg: 'bg-pink-900', border: 'border-pink-600' }, // Level 7+
   ]
   return colors[Math.min(level - 1, colors.length - 1)]
+}
+
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 const generateObstacles = (snake: Position[], food: Position, obstacleCount: number): Obstacle[] => {
@@ -103,6 +111,23 @@ export default function SnakeGame() {
     return []
   })
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [gameStartTime, setGameStartTime] = useState<number>(0)
+  const [currentTime, setCurrentTime] = useState<number>(0)
+  const [playerName, setPlayerName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem('snakePlayerName')
+      return savedName || 'Player'
+    }
+    return 'Player'
+  })
+  const [showNameInput, setShowNameInput] = useState(false)
+
+  const savePlayerName = useCallback((name: string) => {
+    setPlayerName(name)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('snakePlayerName', name)
+    }
+  }, [])
 
   const generateFood = useCallback((snake: Position[], obstacles: Obstacle[]): Position => {
     let newFood: Position
@@ -119,12 +144,15 @@ export default function SnakeGame() {
   }, [])
 
   const saveToLeaderboard = useCallback((gameState: GameState) => {
+    const gameDuration = Math.floor((Date.now() - gameStartTime) / 1000)
     const newEntry: LeaderboardEntry = {
       id: Date.now(),
       score: gameState.score,
       foodsEaten: gameState.foodsEaten,
       level: gameState.level,
-      timestamp: new Date().toLocaleString()
+      timestamp: new Date().toLocaleString(),
+      duration: gameDuration,
+      playerName: playerName || 'Player'
     }
     
     const updatedLeaderboard = [...leaderboard, newEntry]
@@ -135,7 +163,7 @@ export default function SnakeGame() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('snakeGameLeaderboard', JSON.stringify(updatedLeaderboard))
     }
-  }, [leaderboard])
+  }, [leaderboard, gameStartTime, playerName])
 
   const resetGame = useCallback(() => {
     const initialObstacles = generateObstacles(INITIAL_SNAKE, INITIAL_FOOD, BASE_OBSTACLE_COUNT)
@@ -151,6 +179,8 @@ export default function SnakeGame() {
       level: 1
     })
     setIsPlaying(false)
+    setGameStartTime(0)
+    setCurrentTime(0)
   }, [])
 
   const moveObstacles = useCallback((obstacles: Obstacle[]): Obstacle[] => {
@@ -245,7 +275,7 @@ export default function SnakeGame() {
       // Check food collision
       if (head.x === food.x && head.y === food.y) {
         const newFoodsEaten = foodsEaten + 1
-        const newLevel = Math.floor(newFoodsEaten / 25) + 1
+        const newLevel = Math.floor(newFoodsEaten / 15) + 1
         const newSpeed = prevState.speed * 0.95 // Increase speed by 5% (decrease interval by 5%)
         
         // Change obstacle directions every 5 foods
@@ -327,10 +357,24 @@ export default function SnakeGame() {
     return () => clearInterval(gameLoop)
   }, [isPlaying, gameState.gameOver, gameState.speed, moveSnake])
 
+  // Timer effect
+  useEffect(() => {
+    if (!isPlaying || gameState.gameOver) return
+
+    const timerInterval = setInterval(() => {
+      setCurrentTime(Date.now())
+    }, 1000) // Update every second
+
+    return () => clearInterval(timerInterval)
+  }, [isPlaying, gameState.gameOver])
+
   const startGame = () => {
     if (gameState.gameOver) {
       resetGame()
     }
+    const now = Date.now()
+    setGameStartTime(now)
+    setCurrentTime(now)
     setIsPlaying(true)
   }
 
@@ -344,13 +388,44 @@ export default function SnakeGame() {
     <div className={`flex flex-col items-center justify-center min-h-screen ${levelColors.bg} text-white p-4`}>
       <h1 className="text-4xl font-bold mb-4">Snake Game</h1>
       
+      <div className="mb-3 text-center">
+        <span className="text-lg font-semibold text-cyan-400">Current Player: {playerName}</span>
+      </div>
+      
       <div className="mb-4 flex flex-wrap justify-center gap-6">
         <span className="text-xl">Score: {gameState.score}</span>
         <span className="text-xl">Level: {gameState.level}</span>
         <span className="text-xl">Speed: {Math.round(((BASE_SPEED / gameState.speed) * 100))}%</span>
         <span className="text-xl">Blocks/sec: {(1000 / gameState.speed).toFixed(1)}</span>
         <span className="text-xl">Foods: {gameState.foodsEaten}</span>
+        {isPlaying && gameStartTime > 0 && (
+          <span className="text-xl font-bold text-yellow-400">
+            Time: {formatTime(Math.floor((currentTime - gameStartTime) / 1000))}
+          </span>
+        )}
       </div>
+
+      {showNameInput && (
+        <div className="mb-4 bg-black bg-opacity-50 p-4 rounded">
+          <h3 className="text-xl font-bold mb-2 text-center">Enter Your Name</h3>
+          <div className="flex gap-2 justify-center">
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => savePlayerName(e.target.value)}
+              placeholder="Your name..."
+              className="px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+              maxLength={20}
+            />
+            <button
+              onClick={() => setShowNameInput(false)}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 space-x-4">
         {!isPlaying && !gameState.gameOver && (
@@ -393,11 +468,28 @@ export default function SnakeGame() {
         >
           {showLeaderboard ? 'Hide' : 'Show'} Leaderboard
         </button>
+        
+        <button
+          onClick={() => setShowNameInput(!showNameInput)}
+          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded"
+        >
+          Set Name
+        </button>
       </div>
 
       {gameState.gameOver && (
-        <div className="mb-4 text-red-500 text-xl font-bold">
-          Game Over! Final Score: {gameState.score}
+        <div className="mb-4 text-red-500 text-xl font-bold text-center">
+          <div>Game Over! Final Score: {gameState.score}</div>
+          {gameStartTime > 0 && (
+            <div className="text-yellow-400 mt-2">
+              Duration: {formatTime(Math.floor((Date.now() - gameStartTime) / 1000))}
+            </div>
+          )}
+          {playerName && (
+            <div className="text-green-400 mt-1">
+              Player: {playerName}
+            </div>
+          )}
         </div>
       )}
 
@@ -409,11 +501,20 @@ export default function SnakeGame() {
           ) : (
             <div className="space-y-2">
               {leaderboard.map((entry, index) => (
-                <div key={entry.id} className="flex justify-between items-center bg-gray-700 p-2 rounded">
-                  <span className="font-bold">#{index + 1}</span>
-                  <span>Score: {entry.score}</span>
-                  <span>Level: {entry.level}</span>
-                  <span>Foods: {entry.foodsEaten}</span>
+                <div key={entry.id} className="bg-gray-700 p-3 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-yellow-400">#{index + 1}</span>
+                    <span className="font-bold text-green-400">Score: {entry.score}</span>
+                  </div>
+                  <div className="text-sm text-gray-300 grid grid-cols-2 gap-2">
+                    <span>Player: {entry.playerName || 'Anonymous'}</span>
+                    <span>Level: {entry.level}</span>
+                    <span>Duration: {formatTime(entry.duration || 0)}</span>
+                    <span>Foods: {entry.foodsEaten}</span>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {entry.timestamp}
+                  </div>
                 </div>
               ))}
             </div>
@@ -466,7 +567,10 @@ export default function SnakeGame() {
           Avoid yellow obstacles that change direction every 5 foods!
         </p>
         <p className="text-sm text-gray-400">
-          Every 25 foods = new level with 2 more obstacles and new colors!
+          Every 15 foods = new level with 2 more obstacles and new colors!
+        </p>
+        <p className="text-sm text-gray-400">
+          Use the "Set Name" button to customize your player name!
         </p>
       </div>
     </div>
