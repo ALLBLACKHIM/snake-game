@@ -13,7 +13,7 @@ function readLeaderboard() {
     return JSON.parse(data);
 }
 
-function writeLeaderboard(leaderboard) {
+function writeLeaderboard(leaderboard: any) {
     fs.writeFileSync(filePath, JSON.stringify(leaderboard, null, 2));
 }
 
