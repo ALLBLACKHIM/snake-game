@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1752182177803,
+    "score": 70,
+    "foodsEaten": 7,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:16:17",
+    "duration": 16,
+    "playerName": "Player"
+  },
+  {
+    "id": 1752182177805,
+    "score": 70,
+    "foodsEaten": 7,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:16:17",
+    "duration": 16,
+    "playerName": "Player"
+  },
+  {
+    "id": 1752182205022,
+    "score": 0,
+    "foodsEaten": 0,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:16:45",
+    "duration": 1,
+    "playerName": "ALLBLACKHIM "
+  },
+  {
+    "id": 1752182205023,
+    "score": 0,
+    "foodsEaten": 0,
+    "level": 1,
+    "timestamp": "10/07/2025, 23:16:45",
+    "duration": 1,
+    "playerName": "ALLBLACKHIM "
+  }
+]

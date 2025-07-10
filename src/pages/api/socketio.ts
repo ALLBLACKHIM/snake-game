@@ -1,6 +1,6 @@
-import fs from 'fs';
-import { Server } from 'socket.io';
 import { NextApiRequest, NextApiResponse } from 'next';
+import { Server } from 'socket.io';
+import fs from 'fs';
 
 // Type definitions
 interface LeaderboardEntry {
@@ -59,33 +59,25 @@ function getTop10Players(allEntries: LeaderboardEntry[]): LeaderboardEntry[] {
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const socketRes = res as NextApiResponseWithSocket;
     
-    // Handle GET request to return current leaderboard (top 10 players)
-    if (req.method === 'GET') {
-        const allEntries = readLeaderboard();
-        const topPlayers = getTop10Players(allEntries);
-        res.status(200).json(topPlayers);
-        return;
-    }
-    
     if (socketRes.socket.server.io) {
         res.end();
         return;
     }
 
-    const io = new Server(socketRes.socket.server, {
-        path: '/api/socketio',
-        addTrailingSlash: false,
-    });
+    const io = new Server(socketRes.socket.server);
+    socketRes.socket.server.io = io;
 
     io.on('connection', (socket) => {
-        console.log('a user connected');
+        console.log('User connected to leaderboard');
 
-        // Send top 10 players (best score per player) to newly connected client
+        // Send current top 10 players to newly connected client
         const allEntries = readLeaderboard();
         const topPlayers = getTop10Players(allEntries);
         socket.emit('leaderboard', topPlayers);
 
         socket.on('newScore', (entry: LeaderboardEntry) => {
+            console.log('New score received:', entry);
+            
             const allEntries = readLeaderboard();
             allEntries.push(entry);
             
@@ -95,14 +87,15 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
             // Get top 10 players and broadcast to all connected clients
             const topPlayers = getTop10Players(allEntries);
             io.emit('leaderboard', topPlayers);
+            
+            console.log('Broadcasted updated leaderboard to all clients');
         });
 
         socket.on('disconnect', () => {
-            console.log('user disconnected');
+            console.log('User disconnected from leaderboard');
         });
     });
 
-    socketRes.socket.server.io = io;
     res.end();
 }
 
@@ -112,4 +105,3 @@ export const config = {
         externalResolver: true,
     },
 };
-

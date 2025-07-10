@@ -112,7 +112,9 @@ export default function SnakeGame() {
   const [showNameInput, setShowNameInput] = useState(false)
 
   useEffect(() => {
-    const socket = io();
+    // Initialize Socket.IO connection for leaderboard
+    fetch('/api/socketio').finally(() => {
+      const socket = io();
     
     // Listen for leaderboard updates from server
     socket.on('leaderboard', (updatedLeaderboard: LeaderboardEntry[]) => {
@@ -129,9 +131,10 @@ export default function SnakeGame() {
       console.log('Disconnected from leaderboard server');
     });
 
-    return () => {
-      socket.disconnect();
-    };
+      return () => {
+        socket.disconnect();
+      };
+    });
   }, []);
 
   // Load saved data after component mounts (client-side only)
@@ -177,8 +180,10 @@ export default function SnakeGame() {
     }
     
     // Send new score to server - server will handle leaderboard management
-    const socket = io();
-    socket.emit('newScore', newEntry);
+    fetch('/api/socketio').finally(() => {
+      const socket = io();
+      socket.emit('newScore', newEntry);
+    });
     // Note: leaderboard will be updated via socket 'leaderboard' event
   }, [gameStartTime, playerName])
 
