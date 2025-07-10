@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { io } from 'socket.io-client';
 
 interface Position {
   x: number
@@ -110,6 +111,17 @@ export default function SnakeGame() {
   const [playerName, setPlayerName] = useState('Player')
   const [showNameInput, setShowNameInput] = useState(false)
 
+  useEffect(() => {
+    const socket = io();
+    socket.on('leaderboard', (updatedLeaderboard) => {
+      setLeaderboard(updatedLeaderboard);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   // Load saved data after component mounts (client-side only)
   useEffect(() => {
     const savedName = localStorage.getItem('snakePlayerName')
@@ -161,8 +173,11 @@ export default function SnakeGame() {
       .slice(0, 10) // Keep top 10 scores
     
     setLeaderboard(updatedLeaderboard)
+    const socket = io();
+    socket.emit('newScore', newEntry);
+
     if (typeof window !== 'undefined') {
-      localStorage.setItem('snakeGameLeaderboard', JSON.stringify(updatedLeaderboard))
+        localStorage.setItem('snakeGameLeaderboard', JSON.stringify(updatedLeaderboard))
     }
   }, [leaderboard, gameStartTime, playerName])
 
@@ -321,30 +336,45 @@ export default function SnakeGame() {
   }, [generateFood, moveObstacles, saveToLeaderboard])
 
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
-    if (!isPlaying) return
+    switch (e.key) {
+      case ' ': // Spacebar
+        startGame()
+        setShowLeaderboard(false)
+        break
+      case 'p':
+      case 'P':
+        pauseGame()
+        break
+      case 'r':
+      case 'R':
+        resetGame()
+        break
+      default:
+        if (isPlaying) {
+          setGameState(prevState => {
+            const { direction } = prevState
+            let newDirection = direction
 
-    setGameState(prevState => {
-      const { direction } = prevState
-      let newDirection = direction
+            switch (e.key) {
+              case 'ArrowUp':
+                if (direction !== 'DOWN') newDirection = 'UP'
+                break
+              case 'ArrowDown':
+                if (direction !== 'UP') newDirection = 'DOWN'
+                break
+              case 'ArrowLeft':
+                if (direction !== 'RIGHT') newDirection = 'LEFT'
+                break
+              case 'ArrowRight':
+                if (direction !== 'LEFT') newDirection = 'RIGHT'
+                break
+            }
 
-      switch (e.key) {
-        case 'ArrowUp':
-          if (direction !== 'DOWN') newDirection = 'UP'
-          break
-        case 'ArrowDown':
-          if (direction !== 'UP') newDirection = 'DOWN'
-          break
-        case 'ArrowLeft':
-          if (direction !== 'RIGHT') newDirection = 'LEFT'
-          break
-        case 'ArrowRight':
-          if (direction !== 'LEFT') newDirection = 'RIGHT'
-          break
-      }
-
-      return { ...prevState, direction: newDirection }
-    })
-  }, [isPlaying])
+            return { ...prevState, direction: newDirection }
+          })
+        }
+    }
+  }, [isPlaying, startGame, pauseGame, resetGame])
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyPress)
@@ -377,6 +407,7 @@ export default function SnakeGame() {
     setGameStartTime(now)
     setCurrentTime(now)
     setIsPlaying(true)
+    setShowLeaderboard(false) // Minimize leaderboard when game starts
   }
 
   const pauseGame = () => {
@@ -555,9 +586,22 @@ export default function SnakeGame() {
       </div>
 
       <div className="mt-4 text-center">
-        <p className="text-sm text-gray-400">
-          Use arrow keys to control the snake
-        </p>
+        <h3 className="text-lg font-bold mb-2 text-yellow-400">Game Controls</h3>
+        <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+            <strong>SPACEBAR</strong>: Start Game
+          </p>
+          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+            <strong>P</strong>: Pause Game
+          </p>
+          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+            <strong>R</strong>: Reset Game
+          </p>
+          <p className="text-white bg-gray-700 px-3 py-1 rounded">
+            <strong>Arrow Keys</strong>: Move Snake
+          </p>
+        </div>
+        <h3 className="text-lg font-bold mb-2 text-yellow-400">Game Rules</h3>
         <p className="text-sm text-gray-400">
           Eat red food to grow and increase your score!
         </p>
