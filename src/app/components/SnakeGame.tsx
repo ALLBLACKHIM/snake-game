@@ -181,23 +181,6 @@ export default function SnakeGame() {
     }
   }, [leaderboard, gameStartTime, playerName])
 
-  const resetGame = useCallback(() => {
-    const initialObstacles = generateObstacles(INITIAL_SNAKE, INITIAL_FOOD, BASE_OBSTACLE_COUNT)
-    setGameState({
-      snake: INITIAL_SNAKE,
-      food: INITIAL_FOOD,
-      direction: 'RIGHT',
-      gameOver: false,
-      score: 0,
-      speed: BASE_SPEED,
-      obstacles: initialObstacles,
-      foodsEaten: 0,
-      level: 1
-    })
-    setIsPlaying(false)
-    setGameStartTime(0)
-    setCurrentTime(0)
-  }, [])
 
   const moveObstacles = useCallback((obstacles: Obstacle[]): Obstacle[] => {
     return obstacles.map(obstacle => {
@@ -335,6 +318,39 @@ export default function SnakeGame() {
     })
   }, [generateFood, moveObstacles, saveToLeaderboard])
 
+const startGame = () => {
+    if (gameState.gameOver) {
+      resetGame()
+    }
+    const now = Date.now()
+    setGameStartTime(now)
+    setCurrentTime(now)
+    setIsPlaying(true)
+    setShowLeaderboard(false) // Minimize leaderboard when game starts
+  }
+
+  const pauseGame = () => {
+    setIsPlaying(false)
+  }
+
+  const resetGame = useCallback(() => {
+    const initialObstacles = generateObstacles(INITIAL_SNAKE, INITIAL_FOOD, BASE_OBSTACLE_COUNT)
+    setGameState({
+      snake: INITIAL_SNAKE,
+      food: INITIAL_FOOD,
+      direction: 'RIGHT',
+      gameOver: false,
+      score: 0,
+      speed: BASE_SPEED,
+      obstacles: initialObstacles,
+      foodsEaten: 0,
+      level: 1
+    })
+    setIsPlaying(false)
+    setGameStartTime(0)
+    setCurrentTime(0)
+  }, [])
+
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
     switch (e.key) {
       case ' ': // Spacebar
@@ -399,20 +415,6 @@ export default function SnakeGame() {
     return () => clearInterval(timerInterval)
   }, [isPlaying, gameState.gameOver])
 
-  const startGame = () => {
-    if (gameState.gameOver) {
-      resetGame()
-    }
-    const now = Date.now()
-    setGameStartTime(now)
-    setCurrentTime(now)
-    setIsPlaying(true)
-    setShowLeaderboard(false) // Minimize leaderboard when game starts
-  }
-
-  const pauseGame = () => {
-    setIsPlaying(false)
-  }
 
   const levelColors = getLevelColors(gameState.level)
   
