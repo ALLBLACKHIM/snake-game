@@ -40,13 +40,31 @@ function writeLeaderboard(leaderboard: LeaderboardEntry[]) {
     fs.writeFileSync(filePath, JSON.stringify(leaderboard, null, 2));
 }
 
+function getTop10Players(allEntries: LeaderboardEntry[]): LeaderboardEntry[] {
+    const playerBestScores = new Map<string, LeaderboardEntry>();
+    
+    allEntries.forEach(gameEntry => {
+        const playerName = gameEntry.playerName;
+        const existingBest = playerBestScores.get(playerName);
+        
+        if (!existingBest || gameEntry.score > existingBest.score) {
+            playerBestScores.set(playerName, gameEntry);
+        }
+    });
+    
+    return Array.from(playerBestScores.values())
+        .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score)
+        .slice(0, 10);
+}
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const socketRes = res as NextApiResponseWithSocket;
     
-    // Handle GET request to return current leaderboard
+    // Handle GET request to return current leaderboard (top 10 players)
     if (req.method === 'GET') {
-        const leaderboard = readLeaderboard();
-        res.status(200).json(leaderboard);
+        const allEntries = readLeaderboard();
+        const topPlayers = getTop10Players(allEntries);
+        res.status(200).json(topPlayers);
         return;
     }
     
@@ -65,19 +83,21 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     io.on('connection', (socket) => {
         console.log('a user connected');
 
-        socket.emit('leaderboard', readLeaderboard());
+        // Send top 10 players (best score per player) to newly connected client
+        const allEntries = readLeaderboard();
+        const topPlayers = getTop10Players(allEntries);
+        socket.emit('leaderboard', topPlayers);
 
         socket.on('newScore', (entry: LeaderboardEntry) => {
-            const leaderboard = readLeaderboard();
-            leaderboard.push(entry);
-            // Sort by score (highest first) and keep only top 10
-            const topLeaderboard = leaderboard
-                .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score)
-                .slice(0, 10);
+            const allEntries = readLeaderboard();
+            allEntries.push(entry);
             
-            writeLeaderboard(topLeaderboard);
-            // Broadcast updated top 10 leaderboard to all connected clients
-            io.emit('leaderboard', topLeaderboard);
+            // Save all entries (for historical data)
+            writeLeaderboard(allEntries);
+            
+            // Get top 10 players and broadcast to all connected clients
+            const topPlayers = getTop10Players(allEntries);
+            io.emit('leaderboard', topPlayers);
         });
 
         socket.on('disconnect', () => {
